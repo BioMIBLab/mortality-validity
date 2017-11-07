@@ -36,9 +36,9 @@ object CheckRuleValidity extends App {
   val tic = System.nanoTime()
   
   // open files
-  val rulesFile = io.Source.fromFile(args(0))
-  val codesFile = io.Source.fromFile(args(1))
-  val ontologyFile = io.Source.fromFile(args(2))
+  val rulesFile = io.Source.fromFile("data/rules.csv")
+  val codesFile = io.Source.fromFile("data/valid_codes_2015.csv")
+  val ontologyFile = io.Source.fromFile("data/Causal2015semi.csv")
   
   // read in the ontology of valid relationships
   // map address -> List[(subaddress_min, subaddress_max)]
@@ -88,8 +88,8 @@ object CheckRuleValidity extends App {
   println("done - " + invalidRules.length + " invalid rules found")
   
   // write the invalids to a file
-  print("Writing output to "+args(3)+"... ");
-  val pw = new PrintWriter(new File(args(3)))
+  print("Writing output to data/invalid.csv... ");
+  val pw = new PrintWriter(new File("data/invalid.csv"))
   pw.println("Support,\"Rule (r1->r2->...)\"")
   invalidRules.foreach(i => {
     pw.println(i.support + "," + i.events.mkString(","))
