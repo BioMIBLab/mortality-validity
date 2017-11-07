@@ -11,8 +11,6 @@ import java.io.PrintWriter
  * Check if mined rules are valid according to the 
  * ontology files provided by the CDC.
  * 
- * Usage: CheckRuleValidity rules.csv validcodes.csv ontology.csv output.csv
- * 
  * Rules files shall be CSV files of the format:
  * 		n, r1, r2, [r3, ...]
  * 
