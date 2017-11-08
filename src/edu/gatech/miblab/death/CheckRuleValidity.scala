@@ -88,8 +88,8 @@ object CheckRuleValidity extends App {
   println("done - " + invalidRules.length + " invalid rules found")
   
   // write the invalids to a file
-  print("Writing output to data/invalid.csv... ");
-  val pw = new PrintWriter(new File("data/invalid.csv"))
+  print("Writing output to output/invalid.csv... ");
+  val pw = new PrintWriter(new File("output/invalid.csv"))
   pw.println("Support,\"Rule (r1->r2->...)\"")
   invalidRules.foreach(i => {
     pw.println(i.support + "," + i.events.mkString(","))
@@ -99,7 +99,6 @@ object CheckRuleValidity extends App {
   
   val toc = System.nanoTime()
   println("CheckRuleValidity complete: " + (toc-tic)/1e9 + "s elapsed")
-  
   
   /**
    * Check if a rule conforms to the ontology
