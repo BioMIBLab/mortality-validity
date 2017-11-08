@@ -76,15 +76,15 @@ object CheckRuleValidity extends App {
   val rules = (for (line <- rulesFile.getLines()) yield {
     line.split(",").toList match {
       case n :: seq => Rule(n.toInt, seq)
-      case _        => Rule(0,Nil) // should never happen
+      case _        => throw new Exception() // should never happen
     }
-  }).toList.filter(_.support>0)
+  }).toList
   rulesFile.close()
   println("done - " + rules.length + " rules read in")
   
   // filter down to just invalid rules
   print("Checking rules... ")
-  val invalidRules = rules.filterNot({r=> validCodes(r) & validCauses(r)})
+  val invalidRules = rules.filterNot({r => validCodes(r) & validCauses(r)})
   println("done - " + invalidRules.length + " invalid rules found")
   
   // write the invalids to a file
@@ -94,8 +94,8 @@ object CheckRuleValidity extends App {
   invalidRules.foreach(i => {
     pw.println(i.support + "," + i.events.mkString(","))
   })
-  pw.close();
-  println("done");
+  pw.close()
+  println("done")
   
   val toc = System.nanoTime()
   println("CheckRuleValidity complete: " + (toc-tic)/1e9 + "s elapsed")
@@ -116,7 +116,7 @@ object CheckRuleValidity extends App {
           case None    => false
         }
       }
-      case _ => false // again, shoultn't ever happen
+      case _ => throw new Exception()
     }).reduce(_&_)
   }
   
