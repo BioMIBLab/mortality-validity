@@ -28,18 +28,15 @@ object CheckRuleValidity extends App {
   print("Checking rules... ")
   val codesValid = validCodesChecker(codes)(_)
   val orderValid = validCausesChecker(causes)(_)
-  val invalidRules = rules.filterNot({r => codesValid(r) && orderValid(r)})
+  val invalidRules = rules.filterNot(r => codesValid(r) && orderValid(r))
   println("done - " + invalidRules.size + " invalid rules found")
   
   // write the invalids to a file
   print("Writing output to output/invalid.csv... ")
-  val icd10desc = ruleToICD10String(icd10)(_)
+  val csvwriter = ruleToCSVString(icd10)(_)
   val output = new PrintWriter(new File("output/invalid.csv"))
   output.println("Support,Rule,Codes (r1->r2->...)")
-  invalidRules.foreach(i => {
-    output.println(i.support + ",\"" + icd10desc(i) + "\"," + 
-                   i.events.mkString(","))
-  })
+  invalidRules.map(csvwriter).foreach(output.println)
   output.close()
   println("done")
   
@@ -47,9 +44,7 @@ object CheckRuleValidity extends App {
   println("CheckRuleValidity complete: " + (toc-tic)/1e9 + "s elapsed")
   
   /**
-   * Check if a rule conforms to the ontology
-   * @param a rule
-   * @return is the rule valid
+   * Check if a rule conforms to ACME decision table D
    */
   def validCausesChecker(ontology: HashMap[String, Set[(String,String)]])
                         (rule: Rule): Boolean = {
@@ -67,26 +62,31 @@ object CheckRuleValidity extends App {
   }
   
   /**
-   * Check if a rule's list of codes are all reportable
-   * @param a rule
-   * @return are all codes valid
+   * Check if a rule's list of codes are all valid and reportable
    */
   def validCodesChecker(valid: HashSet[String])(rule: Rule): Boolean = {
     rule.events.map(valid.contains(_)).reduce(_&_)
   }
   
-  def ruleToICD10String(mapping: HashMap[String,String])(rule: Rule): String = {
-    rule.events.map(c => mapping.get(c) match {
+  /**
+   * Use the human-readable ICD-10 code descriptions to render 
+   * a Rule as a CSV String of the format:
+   * 
+   * 		support, human_readable, r1, r2, [...]
+   */
+  def ruleToCSVString(mapping: HashMap[String,String])(rule: Rule): String = {
+    val desc = rule.events.map(c => mapping.get(c) match {
       case Some(x) => x
       case None    => c
     }).mkString(" -> ")
+    return rule.support + ",\"" + desc + "\"," + rule.events.mkString(",")
   }
   
   /**
    * Load in SPM rules file
    * 
    * Rules files shall be CSV files of the format:
-   * 		n, r1, r2, [r3, ...]
+   * 		support, r1, r2, [r3, ...]
    */
   def loadRules(rulesFileName: String): List[Rule] = {
     val rulesFile = io.Source.fromFile(rulesFileName)
@@ -96,7 +96,7 @@ object CheckRuleValidity extends App {
 	    Rule(cols.head.toInt, cols.tail.toList)
     }).toList
     rulesFile.close()
-    println("done - " + rules.size + " rules read in")
+    println("done - " + rules.size + " rules imported")
     return rules
   }
   
@@ -106,7 +106,7 @@ object CheckRuleValidity extends App {
    * Valid code files shall be CSV files of the format:
    * 		code, details, [...]
    * 
-   * TODO ask if anything else is needed with this data set
+   * TODO ask if any finer detail is needed with this data set
    */
   def loadCodes(codesFileName: String): HashSet[String] = {
     print("Importing valid codes file... ")
@@ -168,13 +168,14 @@ object CheckRuleValidity extends App {
     val icd10 = new HashMap[String, String]()
     for (line <- icd10File.getLines()) {
       val cols = line.split(',')
-      icd10 += cols.head -> cols.tail.mkString(",").replaceAll("\"", "")
+      icd10 += cols.head -> cols.tail.mkString(",").replace("\"", "")
     }
     icd10File.close()
     println("done - " + icd10.size + " code descriptions imported")
     return icd10
   }
   
+  /** simple wrapper for a rule with Int support and a sequence of codes */
   case class Rule(support: Int, events: Seq[String])
   
 }
