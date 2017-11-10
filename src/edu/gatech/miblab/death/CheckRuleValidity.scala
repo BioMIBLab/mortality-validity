@@ -5,7 +5,10 @@ import collection.mutable.HashMap
 import collection.mutable.HashSet
 
 import java.io.File
+import java.io.FileInputStream
 import java.io.PrintWriter
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
 
 /**
  * Check if mined rules are valid according to the 
@@ -21,7 +24,8 @@ object CheckRuleValidity extends App {
   // load source data
   val rules = loadRules("data/rules.csv")
   val codes = loadCodes("data/valid_codes_2015.csv")
-  val causes = loadValidCauses("data/Causal2015semi.csv")
+  val italy = loadCausalTableCSV("data/Causal2015semi.csv")
+  val causes = loadCausalTableZip("data/2ctd2000.zip")
   val icd10 = loadICD10map("data/icd10cm.csv")
   
   // filter down to just invalid rules
@@ -33,10 +37,10 @@ object CheckRuleValidity extends App {
   
   // write the invalids to a file
   print("Writing output to output/invalid.csv... ")
-  val csvwriter = ruleToCSVString(icd10)(_)
+  val rule2csv = ruleToCSVString(icd10)(_)
   val output = new PrintWriter(new File("output/invalid.csv"))
   output.println("Support,Rule,Codes (r1->r2->...)")
-  invalidRules.map(csvwriter).foreach(output.println)
+  invalidRules.map(rule2csv).foreach(output.println)
   output.close()
   println("done")
   
@@ -132,8 +136,8 @@ object CheckRuleValidity extends App {
    * 		1:1 mapping of subaddress_min causes address
    * 	- Ambivalence may be either an empty string or "M"
    */
-  def loadValidCauses(causesFileName: String): HashMap[String, Set[(String,String)]] = {
-    print("Importing ontology file... ")
+  def loadCausalTableCSV(causesFileName: String): HashMap[String, Set[(String,String)]] = {
+    print("Importing ontology file (CSV)... ")
     val INCLUDE_AMBIVALENT = true
     val causesFile = io.Source.fromFile(causesFileName)
     // map address -> List[(subaddress_min, subaddress_max)]
@@ -144,6 +148,36 @@ object CheckRuleValidity extends App {
         // if only a single subaddress present, use as both min and max
         val addr = cols(0)
         val subaddr = (cols(1), if(cols(2).isEmpty()) cols(1) else cols(2))
+        ontology.get(addr) match {
+          case None    => ontology += addr -> Set(subaddr)
+          case Some(x) => ontology += addr -> (x + subaddr) 
+        }
+      }
+    }
+    causesFile.close()
+    println("done - " + ontology.size + " addresses with one or more subaddresses")
+    return ontology
+  }
+  
+  /**
+   * Load in the ACME Causal Table (table D) from NVSS ASCII format. 
+   * Tested with 2016 ACME tables available from NVSS's FTP server.
+   */
+  def loadCausalTableZip(causesFileName: String): HashMap[String, Set[(String,String)]] = {
+    print("Importing ontology file (ZIP)... ")
+    val INCLUDE_AMBIVALENT = true
+    val zipstream = new ZipInputStream(new FileInputStream(causesFileName))
+    var ze: ZipEntry = null
+    do { ze = zipstream.getNextEntry() } while (ze.getName()!="ACMECAS.TXT")
+    val causesFile = io.Source.fromInputStream(zipstream)
+    // map address -> List[(subaddress_min, subaddress_max)]
+    val ontology = new HashMap[String, Set[(String,String)]]()
+    for (line <- causesFile.getLines()) {
+      val cols = line.split("\\s+")
+      if (cols.length>=2 && (cols.length<4 || (cols(3)=="M" && INCLUDE_AMBIVALENT))) {
+        // if only a single subaddress present, use as both min and max
+        val addr = cols(0).substring(10).trim
+        val subaddr = (cols(1), if(cols.length<3) cols(1) else cols(2))
         ontology.get(addr) match {
           case None    => ontology += addr -> Set(subaddr)
           case Some(x) => ontology += addr -> (x + subaddr) 
