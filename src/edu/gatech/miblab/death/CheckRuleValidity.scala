@@ -22,10 +22,10 @@ object CheckRuleValidity extends App {
   val DEBUG = true
   
   // load source data
-  val rules = loadRules("data/rules.csv")
+  val rules = loadRules("data/mort2012_o_seqs_1_v2_discard.csv")
   val codes = loadCodes("data/valid_codes_2015.csv")
-  val italy = loadCausalTableCSV("data/Causal2015semi.csv")
-  val causes = loadCausalTableZip("data/2ctd2000.zip")
+  val causes = loadCausalTableCSV("data/Causal2015semi.csv")
+  // val causes = loadCausalTableZip("data/2ctd2000.zip")
   val icd10 = loadICD10map("data/icd10cm.csv")
   
   // filter down to just invalid rules
